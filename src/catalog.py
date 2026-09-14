@@ -8,19 +8,39 @@ class ProductCatalog:
 
     and returns only the product names sorted accordingly.
     """
+    
     if category is None or max_price is None:
       return []
+    target_category = str(category).strip().lower()
+    target_max_price = float(max_price)
 
-    # TODO: 1. Sanitize input parameters (types and string formatting)
+    base_url = "https://jsonmock.hackerrank.com/api/inventory"
+    first_response = requests.get(base_url).json()
+    total_pages = first_response.get("total_pages",1)
+    data = first_response.get("data",[])
+    
+    for page in range(2, total_pages+1):
+      resp = requests.get(base_url, params={"page": page}).json()
+      if resp.get("data", []) == []:
+        break
+      data.extend(resp.get("data",[]))
+      
+    def parse_price(val):
+      try:
+        return float(val) if val is not None else 0.0
+      except (ValueError, TypeError):
+        return 0.0
 
-    # TODO: 2. Make the initial API request to retrieve initial data and total_pages
-    # Base URL: https://jsonmock.hackerrank.com/api/inventory
+    filtered = [
+      {**item, "price": parse_price(item.get("price"))}
+      for item in data
+      if str(item.get("category")).strip().lower() == target_category
+      and parse_price(item.get("price")) <= target_max_price
+    ]
 
-    # TODO: 3. Loop through remaining pages to collect the entire dataset
+    sorted_products = sorted(filtered, key=lambda x: (-x["price"], x["name"]))
 
-    # TODO: 4. Handle invalid prices (None/ValueError -> 0.0) and filter by category and max_price
-
-    # TODO: 5. Sort by price (descending) and name (ascending)
-
-    # TODO: 6. Return the list of product names
-    pass
+    names = [
+      product.get('name') for product in sorted_products
+      ]
+    return names
